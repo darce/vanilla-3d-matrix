@@ -7,24 +7,27 @@ let angle = 0
 
 info.innerHTML = `center x: ${center.x}, center y: ${center.y}`
 
-const orthographicMatrix = [[1, 0, 0], [0, 1, 0]]
-
 const pointsArray = [
-    { x: -50, y: -50, z: 0 },
-    { x: 50, y: -50, z: 0 },
-    { x: 50, y: 50, z: 0 },
-    { x: -50, y: 50, z: 0 }
+    { x: -0.5, y: -0.5, z: -0.5 },
+    { x: 0.5, y: -0.5, z: -0.5 },
+    { x: 0.5, y: 0.5, z: -0.5 },
+    { x: -0.5, y: 0.5, z: -0.5 },
+    { x: -0.5, y: -0.5, z: 0.5 },
+    { x: 0.5, y: -0.5, z: 0.5 },
+    { x: 0.5, y: 0.5, z: 0.5 },
+    { x: -0.5, y: 0.5, z: 0.5 }
 ]
+
 const projectPoints = (pointsArray) => {
     const result = []
+    const distance = 2.2
     pointsArray.forEach(point => {
-        result.push(matrixMultiplyPoint(orthographicMatrix, point))
+        const f = 1 / (distance - point.z)
+        const projectionMatrix = [[f, 0, 0], [0, f, 0], [0, 0, 1]]
+        result.push(matrixMultiplyPoint(projectionMatrix, point))
     })
-
     return result
 }
-
-
 
 const rotationX = (pointsArray, angle) => {
     const rotationMatrix = [
@@ -32,7 +35,7 @@ const rotationX = (pointsArray, angle) => {
         [0, Math.cos(angle), Math.sin(angle) * -1],
         [0, Math.sin(angle), Math.cos(angle)]
     ]
-    return rotatePointsWithMatrix(pointsArray, rotationMatrix)
+    return transformPointsWithMatrix(pointsArray, rotationMatrix)
 }
 
 const rotationY = (pointsArray, angle) => {
@@ -41,17 +44,28 @@ const rotationY = (pointsArray, angle) => {
         [0, 1, 0],
         [-Math.sin(angle), 0, Math.cos(angle)]
     ]
-    return rotatePointsWithMatrix(pointsArray, rotationMatrix)
+    return transformPointsWithMatrix(pointsArray, rotationMatrix)
 }
+
+const scaleXYZ = (pointsArray, scale) => {
+    const scaleMatrix = [
+        [scale, 0, 0],
+        [0, scale, 0],
+        [0, 0, 1]
+    ]
+    return transformPointsWithMatrix(pointsArray, scaleMatrix)
+}
+
 const rotationZ = (pointsArray, angle) => {
     const rotationMatrix = [
         [Math.cos(angle), Math.sin(angle) * -1, 0],
         [Math.sin(angle), Math.cos(angle), 0],
         [0, 0, 1]
     ]
-    return rotatePointsWithMatrix(pointsArray, rotationMatrix)
+    return transformPointsWithMatrix(pointsArray, rotationMatrix)
 }
-const rotatePointsWithMatrix = (pointsArray, rotationMatrix) => {
+
+const transformPointsWithMatrix = (pointsArray, rotationMatrix) => {
     const result = []
     pointsArray.forEach(point => {
         result.push(matrixMultiplyPoint(rotationMatrix, point))
@@ -84,7 +98,6 @@ const matrixMultiplyPoint = (projectionMatrix, point3d) => {
             result[i][j] = sum
         }
     }
-
     const [x, y] = result.map(row => row[0])
     /** Return as point object */
     return matrixToPoint(result)
@@ -113,34 +126,50 @@ const matrixToPoint = (matrix) => {
     return point
 }
 
-const transformPoints = (pointsArray, angle = 0) => {
-    const projectedPoints = projectPoints(pointsArray)
-    const rotatedPointsY = rotationY(projectedPoints, angle)
-    const rotatedPointsX = rotationX(rotatedPointsY, angle)
-    const rotatedPointsZ = rotationZ(rotatedPointsX, angle)
+const transformPoints = (pointsArray, angle = 0, scale = 1) => {
+    /** First rotate and scale, then project */
+    const rotatedPointsX = rotationX(pointsArray, angle)
+    const rotatedPointsY = rotationY(rotatedPointsX, angle)
+    const rotatedPointsZ = rotationZ(rotatedPointsY, angle)
+    const scaledPoints = scaleXYZ(rotatedPointsZ, scale)
+    const projectedPoints = projectPoints(scaledPoints)
+    return projectedPoints
+}
 
-    return rotatedPointsZ
+const mapRange = (originalValue, originalMin, originalMax, newMin, newMax) => {
+    return ((originalValue - originalMin) / (originalMax - originalMin)) * (newMax - newMin) + newMin;
 }
 
 const renderPoints = (transformedPoints) => {
     cube.innerHTML = '';
 
     transformedPoints.forEach(point => {
+        const originalValue = point.z
+        const originalMin = -60;
+        const originalMax = 80;
+        const newMin = 0;
+        const newMax = 1;
+        const mappedValue = mapRange(originalValue, originalMin, originalMax, newMin, newMax);
+
         const x = point.x + center.x
         const y = point.y + center.y
         const vertex = document.createElement('div')
+        vertex.innerHTML
         vertex.classList.add('vertex')
         vertex.style.left = `${x}px`
         vertex.style.top = `${y}px`
+        vertex.style.backgroundColor = `rgb( 230, 55, 100, 1)`
         cube.appendChild(vertex)
     })
 }
 
-const loop = () => {
-    angle += 0.01
-    const transformedPoints = transformPoints(pointsArray, angle)
-    renderPoints(transformedPoints)
+/** TODO: Connect edges */
 
+const loop = () => {
+    angle += 0.001
+    scale = 120
+    const transformedPoints = transformPoints(pointsArray, angle, scale)
+    renderPoints(transformedPoints)
     window.requestAnimationFrame(loop)
 }
 

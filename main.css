@@ -4,6 +4,7 @@ body {
 
 .cube {
     position: relative;
+    margin-top: 100px;
 }
 
 .vertex {
@@ -12,4 +13,5 @@ body {
     width: 5px;
     height: 5px;
     background: red;
+    cursor: pointer;
 }
