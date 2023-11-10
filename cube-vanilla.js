@@ -3,6 +3,7 @@ const cube = document.querySelector('.cube')
 const vertices = document.querySelectorAll('.vertex')
 const center = { x: cube.offsetWidth / 2, y: cube.offsetHeight / 2 }
 const cubeSize = 100
+let angle = 0
 
 info.innerHTML = `center x: ${center.x}, center y: ${center.y}`
 
@@ -23,16 +24,38 @@ const projectPoints = (pointsArray) => {
     return result
 }
 
-const rotatePoints = (pointsArray, angle) => {
-    const result = []
+
+
+const rotationX = (pointsArray, angle) => {
+    const rotationMatrix = [
+        [1, 0, 0],
+        [0, Math.cos(angle), Math.sin(angle) * -1],
+        [0, Math.sin(angle), Math.cos(angle)]
+    ]
+    return rotatePointsWithMatrix(pointsArray, rotationMatrix)
+}
+
+const rotationY = (pointsArray, angle) => {
+    const rotationMatrix = [
+        [Math.cos(angle), 0, Math.sin(angle) * -1],
+        [0, 1, 0],
+        [-Math.sin(angle), 0, Math.cos(angle)]
+    ]
+    return rotatePointsWithMatrix(pointsArray, rotationMatrix)
+}
+const rotationZ = (pointsArray, angle) => {
     const rotationMatrix = [
         [Math.cos(angle), Math.sin(angle) * -1, 0],
-        [Math.sin(angle), Math.cos(angle), 0]
+        [Math.sin(angle), Math.cos(angle), 0],
+        [0, 0, 1]
     ]
+    return rotatePointsWithMatrix(pointsArray, rotationMatrix)
+}
+const rotatePointsWithMatrix = (pointsArray, rotationMatrix) => {
+    const result = []
     pointsArray.forEach(point => {
         result.push(matrixMultiplyPoint(rotationMatrix, point))
     })
-
     return result
 }
 
@@ -73,6 +96,7 @@ const pointToMatrix = (pointObj) => {
         pointObj.y,
         pointObj.z
     ]
+    /** Return 2D array */
     return Array(matrix)
 }
 
@@ -91,12 +115,16 @@ const matrixToPoint = (matrix) => {
 
 const transformPoints = (pointsArray, angle = 0) => {
     const projectedPoints = projectPoints(pointsArray)
-    const rotatedPoints = rotatePoints(projectedPoints, angle)
-    console.log('rotatedPoints', rotatedPoints)
-    return rotatedPoints
+    const rotatedPointsY = rotationY(projectedPoints, angle)
+    const rotatedPointsX = rotationX(rotatedPointsY, angle)
+    const rotatedPointsZ = rotationZ(rotatedPointsX, angle)
+
+    return rotatedPointsZ
 }
 
 const renderPoints = (transformedPoints) => {
+    cube.innerHTML = '';
+
     transformedPoints.forEach(point => {
         const x = point.x + center.x
         const y = point.y + center.y
@@ -108,9 +136,12 @@ const renderPoints = (transformedPoints) => {
     })
 }
 
-const render = () => {
-    const transformedPoints = transformPoints(pointsArray, 30)
+const loop = () => {
+    angle += 0.01
+    const transformedPoints = transformPoints(pointsArray, angle)
     renderPoints(transformedPoints)
+
+    window.requestAnimationFrame(loop)
 }
 
-render()
+loop()
