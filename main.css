@@ -1,0 +1,11 @@
+.cube {
+    position: relative;
+}
+
+.vertex {
+    display: inline-block;
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background: red;
+}
