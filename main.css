@@ -5,6 +5,8 @@ body {
 .cube {
     position: relative;
     margin-top: 100px;
+    width: 100%;
+    min-height: 200px;
 }
 
 .vertex {
@@ -12,6 +14,15 @@ body {
     position: absolute;
     width: 5px;
     height: 5px;
-    background: red;
+    background-color: red;
     cursor: pointer;
+    transition: transform 0.1s ease-out;
+    image-rendering: pixelated;
+    font-size: 10px;
+}
+
+.edge {
+    height: 1px;
+    width: 100%;
+    background-color: black;
 }

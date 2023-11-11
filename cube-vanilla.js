@@ -1,13 +1,10 @@
 const info = document.querySelector('.info')
 const cube = document.querySelector('.cube')
-const vertices = document.querySelectorAll('.vertex')
+const container = document.querySelector('.container')
+const body = document.querySelector('body')
 const center = { x: cube.offsetWidth / 2, y: cube.offsetHeight / 2 }
-const cubeSize = 100
-let angle = 0
 
-info.innerHTML = `center x: ${center.x}, center y: ${center.y}`
-
-const pointsArray = [
+const cubePointsArray = [
     { x: -0.5, y: -0.5, z: -0.5 },
     { x: 0.5, y: -0.5, z: -0.5 },
     { x: 0.5, y: 0.5, z: -0.5 },
@@ -18,12 +15,39 @@ const pointsArray = [
     { x: -0.5, y: 0.5, z: 0.5 }
 ]
 
-const projectPoints = (pointsArray) => {
+const phi = (1 + Math.sqrt(5)) / 2;
+
+const dodecahedronPointsArray = [
+    { x: 0, y: 1, z: phi },
+    { x: 0, y: -1, z: -phi },
+    { x: 1, y: phi, z: 0 },
+    { x: -1, y: phi, z: 0 },
+    { x: 1, y: -phi, z: 0 },
+    { x: -1, y: -phi, z: 0 },
+    { x: phi, y: 0, z: 1 },
+    { x: -phi, y: 0, z: -1 },
+    { x: phi, y: 0, z: -1 },
+    { x: -phi, y: 0, z: 1 },
+    { x: 0, y: 1, z: -phi },
+    { x: 0, y: -1, z: phi }
+];
+
+const tetrahedronPointsArray = [
+    { x: -0.5, y: -0.5, z: -0.5 },
+    { x: 0.5, y: -0.5, z: -0.5 },
+    { x: 0, y: 0.5, z: -0.5 },
+    { x: 0, y: 0, z: 0.5 }
+];
+
+
+const projectPoints = (pointsArray, distance) => {
     const result = []
-    const distance = 2.2
     pointsArray.forEach(point => {
         const f = 1 / (distance - point.z)
-        const projectionMatrix = [[f, 0, 0], [0, f, 0], [0, 0, 1]]
+        const projectionMatrix = [
+            [f, 0, 0],
+            [0, f, 0],
+            [0, 0, 1]]
         result.push(matrixMultiplyPoint(projectionMatrix, point))
     })
     return result
@@ -32,7 +56,7 @@ const projectPoints = (pointsArray) => {
 const rotationX = (pointsArray, angle) => {
     const rotationMatrix = [
         [1, 0, 0],
-        [0, Math.cos(angle), Math.sin(angle) * -1],
+        [0, Math.cos(angle), -Math.sin(angle)],
         [0, Math.sin(angle), Math.cos(angle)]
     ]
     return transformPointsWithMatrix(pointsArray, rotationMatrix)
@@ -40,7 +64,7 @@ const rotationX = (pointsArray, angle) => {
 
 const rotationY = (pointsArray, angle) => {
     const rotationMatrix = [
-        [Math.cos(angle), 0, Math.sin(angle) * -1],
+        [Math.cos(angle), 0, -Math.sin(angle)],
         [0, 1, 0],
         [-Math.sin(angle), 0, Math.cos(angle)]
     ]
@@ -58,7 +82,7 @@ const scaleXYZ = (pointsArray, scale) => {
 
 const rotationZ = (pointsArray, angle) => {
     const rotationMatrix = [
-        [Math.cos(angle), Math.sin(angle) * -1, 0],
+        [Math.cos(angle), -Math.sin(angle), 0],
         [Math.sin(angle), Math.cos(angle), 0],
         [0, 0, 1]
     ]
@@ -126,51 +150,114 @@ const matrixToPoint = (matrix) => {
     return point
 }
 
-const transformPoints = (pointsArray, angle = 0, scale = 1) => {
+const mapRange = (originalValue, originalMin, originalMax, newMin, newMax) => {
+    return ((originalValue - originalMin) / (originalMax - originalMin)) * (newMax - newMin) + newMin;
+}
+
+const transformPoints = (pointsArray, angle = 0, scale = 1, distance = 1) => {
     /** First rotate and scale, then project */
     const rotatedPointsX = rotationX(pointsArray, angle)
     const rotatedPointsY = rotationY(rotatedPointsX, angle)
     const rotatedPointsZ = rotationZ(rotatedPointsY, angle)
     const scaledPoints = scaleXYZ(rotatedPointsZ, scale)
-    const projectedPoints = projectPoints(scaledPoints)
+    const projectedPoints = projectPoints(scaledPoints, distance)
     return projectedPoints
 }
 
-const mapRange = (originalValue, originalMin, originalMax, newMin, newMax) => {
-    return ((originalValue - originalMin) / (originalMax - originalMin)) * (newMax - newMin) + newMin;
-}
+/** TODO: Connect edges */
+let angle = 0
 
-const renderPoints = (transformedPoints) => {
-    cube.innerHTML = '';
-
-    transformedPoints.forEach(point => {
-        const originalValue = point.z
-        const originalMin = -60;
-        const originalMax = 80;
-        const newMin = 0;
-        const newMax = 1;
-        const mappedValue = mapRange(originalValue, originalMin, originalMax, newMin, newMax);
-
+const initializeVertices = (pointsArray) => {
+    pointsArray.forEach((point, index) => {
         const x = point.x + center.x
         const y = point.y + center.y
         const vertex = document.createElement('div')
-        vertex.innerHTML
+        vertex.innerHTML = index
         vertex.classList.add('vertex')
-        vertex.style.left = `${x}px`
-        vertex.style.top = `${y}px`
-        vertex.style.backgroundColor = `rgb( 230, 55, 100, 1)`
+        vertex.style.transform = `translate(${x}px, ${y}px)`
+        vertex.setAttribute('data-vertex-id', index)
         cube.appendChild(vertex)
+    })
+    cube.addEventListener('click', handleClickVertex, false)
+}
+
+const updatePoints = (transformedPointsArray) => {
+    const vertices = document.querySelectorAll('.vertex')
+    transformedPointsArray.forEach((point, index) => {
+        const x = point.x + center.x
+        const y = point.y + center.y
+        const vertex = vertices[index]
+        vertex.style.transform = `translate(${x}px, ${y}px)`
     })
 }
 
-/** TODO: Connect edges */
+const connectPoints = (transformedPointsArray) => {
+    const vertices = document.querySelectorAll('.vertex')
+    document.querySelectorAll('.edge').forEach(edge => edge.remove());
 
-const loop = () => {
-    angle += 0.001
-    scale = 120
-    const transformedPoints = transformPoints(pointsArray, angle, scale)
-    renderPoints(transformedPoints)
-    window.requestAnimationFrame(loop)
+    transformedPointsArray.forEach((point, index) => {
+        const x = point.x
+        const y = point.y
+        const vertex = vertices[index]
+        const nextVertex = vertices[(index + 1) % transformedPointsArray.length]
+
+        // Calculate the angle between the current and next vertices
+        const deltaX = nextVertex.offsetLeft - x;
+        const deltaY = nextVertex.offsetTop - y;
+        const angle = Math.atan2(deltaY, deltaX);
+
+        // Calculate the length of the edge
+        const length = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+
+        const edge = document.createElement('div')
+        edge.classList.add('edge')
+        edge.style.transform = `translate(${x}px, ${y}px)`
+        edge.style.width = `${length}px`;
+
+
+        edge.style.transform = `translate(${x}px, ${y}px) rotate(${angle}rad)`;
+        vertex.appendChild(edge)
+
+    })
 }
 
-loop()
+const loop = (pointsArray) => {
+    angle += 0.01
+    let scale = 100
+    const distance = 2
+    const transformedPointsArray = transformPoints(pointsArray, angle, scale, distance)
+    updatePoints(transformedPointsArray)
+    connectPoints(transformedPointsArray)
+    window.requestAnimationFrame(() => loop(pointsArray))
+}
+
+
+const handleClickVertex = (e) => {
+    if (e.target.classList.contains('vertex')) {
+        const vertexId = e.target.getAttribute('data-vertex-id');
+        console.log('Vertex clicked with ID:', vertexId);
+        const vertex = e.target
+        const transformString = vertex.style.transform
+        // Find the index of the opening parenthesis and comma
+        const startIndex = transformString.indexOf('(')
+        const commaIndex = transformString.indexOf(',')
+
+        if (startIndex !== -1 && commaIndex !== -1) {
+            // Extract x and y substrings
+            const xSubstring = transformString.substring(startIndex + 1, commaIndex).trim()
+            const ySubstring = transformString.substring(commaIndex + 1, transformString.length - 1).trim()
+
+            // Parse x and y values
+            const x = parseFloat(xSubstring)
+            const y = parseFloat(ySubstring)
+
+            info.innerHTML = `point x: ${x} <br />point y: ${y}`
+
+        } else {
+            info.innerHTML = "Invalid transform string"
+        }
+    }
+}
+
+initializeVertices(cubePointsArray)
+loop(cubePointsArray)
